@@ -22,7 +22,7 @@ namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = store (llvmOperandTo
 llvmInstructionToInstr n (Alloca t Nothing _ _) = alloca (ref n tp) tp
   where
     tp = TypeSystem.address $ llvmTypeToTypeT t
-llvmInstructionToInstr n (Load _ a _ _ _) = load (ref n tp) aOp
+llvmInstructionToInstr n (Load _ a _ _ _) = load (ref n $ typePointedTo tp) aOp
   where
     aOp = llvmOperandToOp a
     tp = opType aOp

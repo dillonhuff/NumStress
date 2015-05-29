@@ -95,7 +95,7 @@ newSymbol t ms =
   case isAddress t of
     True -> do
       (addrOfVal, newMS) <- newSymbol (typePointedTo t) ms
-      addr <- freshSymbol $ TypeSystem.address t
+      addr <- freshSymbol $ t
       return $ (addr, addValue addr addrOfVal newMS)
     False -> do
       val <- freshSymbol t
