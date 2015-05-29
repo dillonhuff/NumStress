@@ -8,9 +8,12 @@ import LLVM.General.Analysis
 import LLVM.General.AST
 import LLVM.General.Context
 
+import Constraint
 import Error
 import InstructionSet
 import LLVMUtils
+import MemoryState
+import Term
 import TypeSystem
 import Utils
 
@@ -21,29 +24,6 @@ extractGlobal (GlobalDefinition d) = d
 
 isFunctionDef (GlobalDefinition (Function _ _ _ _ _ _ _ _ _ _ _ _)) = True
 isFunctionDef _ = False
-
-addNamedSymbol :: TypeT -> Name -> MemoryState -> State Int MemoryState
-addNamedSymbol t n ms = do
-  (s, ms) <- newSymbol t ms
-  return $ addNameSymbol (ref (nameToString n) t) s ms
-
-addOpSymbol :: TypeT -> Op -> MemoryState -> State Int MemoryState
-addOpSymbol t op ms = do
-  (s, ms) <- newSymbol t ms
-  return $ addNameSymbol op s ms
-
-freshSymbol t = do
-  i <- get
-  put $ i + 1
-  return $ symbol t i
-
-newSymbol t ms =
-  case isAddress t of
-    True -> error $ "newSymbol does not support " ++ show t ++ " yet"
-    False -> do
-      val <- freshSymbol t
-      addr <- freshSymbol $ TypeSystem.address t
-      return $ (addr, addValue addr val ms)
 
 data ExecutionState
   = ExecutionState {
@@ -61,68 +41,6 @@ liveStates e = L.filter isLive $ memstates e
 errorsDetected e = L.map extractError $ L.filter isError $ memstates e
 
 instructionAt ind e = getInstr ind $ iStream e
-
-data MemoryState
-  = MemoryState {
-    nameMap :: Map Op Term,
-    addrMap :: Map Term Term,
-    memConstraint :: Constraint,
-    ip :: Int,
-    status :: MemStatus
-    } deriving (Eq, Show)
-
-initMemState nm am = MemoryState nm am T 1 Live
-
-isLive (MemoryState _ _ _ _ Live) = True
-isLive _ = False
-
-isError (MemoryState _ _ _ _ (Error _)) = True
-isError _ = False
-
-extractError (MemoryState _ _ _ _ (Error e)) = e
-
-incrementIP (MemoryState nm am c ip s) =
-  MemoryState nm am c (ip+1) s
-
-setCompleted (MemoryState nm am c ip _) =
-  MemoryState nm am c ip Completed
-
-addNameSymbol n s (MemoryState nm am c ip st) =
-  MemoryState (M.insert n s nm) am c ip st
-
-addValue addr val (MemoryState nm am c ip st) =
-  MemoryState nm (M.insert addr val am) c ip st
-
-instance Ord MemoryState where
-  (<=) m1 m2 = memConstraint m1 <= memConstraint m2
-
-data MemStatus
-  = Live
-  | Completed
-  | Error NSError
-    deriving (Eq, Ord, Show)
-
-data Constraint
-  = Dis [Constraint]
-  | Con [Constraint]
-  | Not Constraint
-  | Predicate String Int [Term]
-  | T
-  | F
-    deriving (Eq, Ord, Show)
-
-dis = Dis
-con = Con
-false = F
-true = T
-
-data Term
-  = Func String Int [Term]
-  | IntConstant Int Integer
-  | Symbol TypeT Int
-    deriving (Eq, Ord, Show)
-
-symbol = Symbol
 
 moduleErrors :: String -> IO [NSError]
 moduleErrors str = do
@@ -200,7 +118,9 @@ executeInstruction i es ms =
     RETVAL -> return [setCompleted ms]
     LABEL -> return [incrementIP ms]
     ALLOCA -> execAlloca i ms
-    STORE -> execStore i ms
+    STORE -> return $ execStore i ms
+    LOAD -> execLoad i ms
+    SDIV -> return $ execSDiv i ms
     other -> error $ "executeInstruction does not support " ++ show other
 
 execAlloca i ms =
@@ -209,7 +129,21 @@ execAlloca i ms =
     newMS <- addOpSymbol (InstructionSet.allocatedType i) x ms
     return [incrementIP $ newMS]
 
-execStore i ms = error "execStore not implemented"
+execStore i ms =
+  let a = storeValue i
+      b = storeLoc i in
+  [incrementIP $ setConstraint (\c -> con [c, eq (deref b ms) (valueSym a ms)]) ms]
+
+execLoad :: Instr -> MemoryState -> State Int [MemoryState]
+execLoad i ms =
+  let a = receivingOp i
+      b = loadLoc i in
+  do
+    newMS <- addOpSymbol (opType a) a ms
+    return [incrementIP $ setConstraint (\c -> con [c, eq (valueSym a newMS) (deref b newMS)]) newMS]
+
+execSDiv i ms =
+  error $ show ms
 
 nextInstruction :: ExecutionState -> MemoryState -> Instr
 nextInstruction es ms =

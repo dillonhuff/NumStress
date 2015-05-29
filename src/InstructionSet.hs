@@ -5,7 +5,8 @@ module InstructionSet(Instr,
                       add, sub, mul, sdiv, label,
                       alloca, store, load,
                       retVal, ret,
-                      Op, ref, constant,
+                      storeLoc, storeValue, loadLoc,
+                      Op, ref, constant, opType,
                       Constant,
                       intConst) where
 
@@ -42,8 +43,15 @@ receivingOp (Add x _ _) = x
 receivingOp (Sub x _ _) = x
 receivingOp (Mul x _ _) = x
 receivingOp (SDiv x _ _) = x
+receivingOp (Load x _) = x
+receivingOp other = error $ "receivingOp does not support " ++ show other
 
 allocatedType (Alloca _ t) = t
+
+storeLoc (Store l _) = l
+storeValue (Store _ v) = v
+
+loadLoc (Load _ b) = b
 
 data Opcode
   = RET
@@ -76,6 +84,8 @@ data Op
 
 ref = Ref
 constant = Constant
+
+opType (Ref _ t) = t
 
 data Constant
   = IntConst Word32 Integer

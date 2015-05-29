@@ -3,7 +3,7 @@ module LLVMUtils(llvmTypeToTypeT,
                  nameToString) where
 
 import Data.List as L
-import LLVM.General.AST
+import LLVM.General.AST as AST
 import LLVM.General.AST.Constant
 
 import InstructionSet
@@ -21,7 +21,16 @@ namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = store (llvmOperandTo
 
 llvmInstructionToInstr n (Alloca t Nothing _ _) = alloca (ref n tp) tp
   where
-    tp = llvmTypeToTypeT t
+    tp = TypeSystem.address $ llvmTypeToTypeT t
+llvmInstructionToInstr n (Load _ a _ _ _) = load (ref n tp) aOp
+  where
+    aOp = llvmOperandToOp a
+    tp = opType aOp
+llvmInstructionToInstr n (AST.SDiv _ a b _) = sdiv (ref n tp) aOp bOp
+  where
+    aOp = llvmOperandToOp a
+    bOp = llvmOperandToOp b
+    tp = opType aOp
 llvmInstructionToInstr n i = error $ "llvmInstructionToInstr does not yet support " ++ show i
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t
