@@ -33,7 +33,12 @@ llvmInstructionToInstr n (AST.SDiv _ a b _) = sdiv (ref n tp) aOp bOp
     aOp = llvmOperandToOp a
     bOp = llvmOperandToOp b
     tp = opType aOp
-llvmInstructionToInstr n (AST.Add _ _ a b _) = sdiv (ref n tp) aOp bOp
+llvmInstructionToInstr n (AST.Add _ _ a b _) = add (ref n tp) aOp bOp
+  where
+    aOp = llvmOperandToOp a
+    bOp = llvmOperandToOp b
+    tp = opType aOp
+llvmInstructionToInstr n (AST.Sub _ _ a b _) = sub (ref n tp) aOp bOp
   where
     aOp = llvmOperandToOp a
     bOp = llvmOperandToOp b

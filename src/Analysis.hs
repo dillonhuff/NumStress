@@ -87,6 +87,8 @@ executeInstruction i es ms =
     STORE -> return $ execStore i ms
     LOAD -> return $ execLoad i ms
     SDIV -> execSDiv i ms
+    ADD -> return $ execAdd i ms
+    SUB -> return $ execSub i ms
     other -> error $ "executeInstruction does not support " ++ show other
 
 execAlloca i ms =
@@ -106,6 +108,24 @@ execLoad i ms =
       newMS = addOpSymbol (opType a) a ms in
   [incrementIP $ setConstraint (\c -> con [c, eq (valueSym a newMS) (deref b newMS)]) newMS]
 
+execAdd :: Instr -> MemoryState -> [MemoryState]
+execAdd i ms =
+  let a = lhs i
+      b = rhs i
+      res = receivingOp i
+      ms1 = addOpSymbol (opType res) res ms
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (isum (valueSym a ms1) (valueSym b ms1))]) ms1 in
+  [newMS]
+
+execSub :: Instr -> MemoryState -> [MemoryState]
+execSub i ms =
+  let a = lhs i
+      b = rhs i
+      res = receivingOp i
+      ms1 = addOpSymbol (opType res) res ms
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (iminus (valueSym a ms1) (valueSym b ms1))]) ms1 in
+  [newMS]
+
 execSDiv :: Instr -> MemoryState -> IO [MemoryState]
 execSDiv i ms =
   let a = lhs i
@@ -114,8 +134,9 @@ execSDiv i ms =
       bVal = valueSym b ms
       bType = symbolType bVal
       bWidth = intWidth bType
-      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms
-      safeMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms) (signDivide (valueSym a ms) (valueSym b ms))]) ms in
+      ms1 = addOpSymbol (opType res) res ms
+      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms1
+      safeMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (signDivide (valueSym a ms1) (valueSym b ms1))]) ms1 in
   do
     stateIsSat <- isSatisfiable errMS
     case stateIsSat of

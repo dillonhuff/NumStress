@@ -1,6 +1,6 @@
 module Term(Term,
             symbol, intConstant, symbolType,
-            signDivide, termToZ3Formula) where
+            signDivide, termToZ3Formula, isum, iminus) where
 
 import Data.List as L
 import Data.Word
@@ -24,9 +24,19 @@ symbol = Symbol
 intConstant width val = IntConstant width val
 
 signDivide a b = Func "s-div" 2 [a, b]
+isum a b = Func "+" 2 [a, b]
+iminus a b = Func "-" 2 [a, b]
 
 symbolType (Symbol t _) = t
 
+termToZ3Formula (Func "+" _ [l, r]) = do
+  lf <- termToZ3Formula l
+  rf <- termToZ3Formula r
+  mkBvadd lf rf
+termToZ3Formula (Func "-" _ [l, r]) = do
+  lf <- termToZ3Formula l
+  rf <- termToZ3Formula r
+  mkBvsub lf rf
 termToZ3Formula (IntConstant w value) =  do
   bvW <- mkBvSort $ fromIntegral w
   mkInt64 (fromIntegral value) bvW
