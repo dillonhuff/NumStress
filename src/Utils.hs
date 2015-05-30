@@ -1,4 +1,4 @@
-module Utils(parseModule) where
+module Utils(parseModule, prettyMap) where
 
 import Control.Monad.Except
 import Data.ByteString as BS
@@ -45,3 +45,9 @@ runCommandStrict str = do
 
 myShowList :: (Show a) => [a] -> String
 myShowList as = L.concat $ L.intersperse "\n" $ L.map show as
+
+prettyMap :: (Show a, Show b) => Map a b -> String
+prettyMap m = L.concatMap prettyPair $ M.toList m
+
+prettyPair :: (Show a, Show b) => (a, b) -> String
+prettyPair (x, y) = show x ++ "\t->\t" ++ show y ++ "\n"

@@ -18,6 +18,7 @@ import InstructionSet
 import LLVMUtils
 import Term
 import TypeSystem
+import Utils
 
 data MemoryState
   = MemoryState {
@@ -27,7 +28,20 @@ data MemoryState
     ip :: Int,
     symIndex :: Int,
     status :: MemStatus
-    } deriving (Eq, Show)
+    } deriving (Eq)
+
+instance Show MemoryState where
+  show ms = showHeader ++
+            prettyMap (nameMap ms) ++ "\n\n" ++
+            prettyMap (addrMap ms) ++ "\n\n" ++
+            show (memConstraint ms) ++ "\n\n" ++
+            "Instruction pointer: " ++ show (ip ms) ++ "\n\n" ++
+            "Symbol index: " ++ show (symIndex ms) ++ "\n\n" ++
+            "Status: " ++ show (status ms) ++ "\n\n" ++
+            showFooter
+
+showHeader = "\n*************************** Memory State ***************************\n\n"
+showFooter = "\n********************************************************************"
 
 initMemState nm am = MemoryState nm am true 1 0 Live
 
@@ -101,7 +115,7 @@ newSymbol t ms =
   case isAddress t of
     True ->
       let (addrOfVal, newMS) = newSymbol (typePointedTo t) ms
-          (addr, newMS2) = freshSymbol t newMS in
+          (addr, newMS2) = freshSymbol (TypeSystem.address t) newMS in
       (addr, addValue addr addrOfVal newMS2)
     False ->
       let (val, newMS) = freshSymbol t ms
