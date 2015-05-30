@@ -5,7 +5,7 @@ module MemoryState(MemoryState,
                    setCompleted, initMemState,
                    addNamedSymbol, addOpSymbol,
                    addrSym, valueSym, valueAtAddr, deref,
-                   setConstraint) where
+                   setConstraint, isSatisfiable) where
 
 import LLVM.General.AST
 
@@ -101,3 +101,5 @@ newSymbol t ms =
       val <- freshSymbol t
       addr <- freshSymbol $ TypeSystem.address t
       return $ (addr, addValue addr val ms)
+
+isSatisfiable ms = False

@@ -1,12 +1,15 @@
-module Term(Term, symbol) where
+module Term(Term,
+            symbol, intConstant, symbolType,
+            signDivide) where
 
 import Data.List as L
+import Data.Word
 
 import TypeSystem
 
 data Term
   = Func String Int [Term]
-  | IntConstant Int Integer
+  | IntConstant Word32 Integer
   | Symbol TypeT Int
     deriving (Eq, Ord)
 
@@ -17,4 +20,8 @@ instance Show Term where
   
 
 symbol = Symbol
+intConstant width val = IntConstant width val
 
+signDivide a b = Func "s-div" 2 [a, b]
+
+symbolType (Symbol t _) = t

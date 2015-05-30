@@ -143,7 +143,16 @@ execLoad i ms =
     return [incrementIP $ setConstraint (\c -> con [c, eq (valueSym a newMS) (deref b newMS)]) newMS]
 
 execSDiv i ms =
-  error $ show ms
+  let a = lhs i
+      b = rhs i
+      res = receivingOp i
+      bVal = valueSym b ms
+      bType = symbolType bVal
+      bWidth = intWidth bType
+      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms in
+  case isSatisfiable errMS of
+    True -> error $ "Possible divide by zero" ++ show errMS
+    False -> [incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms) (signDivide (valueSym a ms) (valueSym b ms))]) ms]
 
 nextInstruction :: ExecutionState -> MemoryState -> Instr
 nextInstruction es ms =

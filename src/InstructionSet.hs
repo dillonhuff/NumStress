@@ -6,6 +6,7 @@ module InstructionSet(Instr,
                       alloca, store, load,
                       retVal, ret,
                       storeLoc, storeValue, loadLoc,
+                      lhs, rhs,
                       Op, ref, constant, opType,
                       Constant,
                       intConst) where
@@ -45,6 +46,16 @@ receivingOp (Mul x _ _) = x
 receivingOp (SDiv x _ _) = x
 receivingOp (Load x _) = x
 receivingOp other = error $ "receivingOp does not support " ++ show other
+
+lhs (Add _ l _) = l
+lhs (Sub _ l _) = l
+lhs (Mul _ l _) = l
+lhs (SDiv _ l _) = l
+
+rhs (Add _ _ r) = r
+rhs (Sub _ _ r) = r
+rhs (Mul _ _ r) = r
+rhs (SDiv _ _ r) = r
 
 allocatedType (Alloca _ t) = t
 
