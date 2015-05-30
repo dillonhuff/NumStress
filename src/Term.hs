@@ -1,9 +1,10 @@
 module Term(Term,
             symbol, intConstant, symbolType,
-            signDivide) where
+            signDivide, termToZ3Formula) where
 
 import Data.List as L
 import Data.Word
+import Z3.Monad
 
 import TypeSystem
 
@@ -25,3 +26,13 @@ intConstant width val = IntConstant width val
 signDivide a b = Func "s-div" 2 [a, b]
 
 symbolType (Symbol t _) = t
+
+termToZ3Formula (IntConstant w value) =  do
+  bvW <- mkBvSort $ fromIntegral w
+  mkInt64 (fromIntegral value) bvW
+termToZ3Formula (Symbol t i) =
+  case isInteger t of
+    True -> do
+      vSym <- mkStringSymbol $ show i
+      mkBvVar vSym $ fromIntegral $ intWidth t
+    False -> error $ "termToZ3Formula does not support type "  ++ show t

@@ -1,7 +1,7 @@
 module TypeSystem(TypeT,
                   integer, address,
                   typePointedTo,
-                  isAddress, intWidth) where
+                  isAddress, isInteger, intWidth) where
 
 import Data.Word
 
@@ -19,6 +19,9 @@ address = Address
 
 isAddress (Address _) = True
 isAddress _ = False
+
+isInteger (Integer _) = True
+isInteger _ = False
 
 typePointedTo (Address t) = t
 

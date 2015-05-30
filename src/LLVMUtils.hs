@@ -1,12 +1,14 @@
 module LLVMUtils(llvmTypeToTypeT,
-                 basicBlockToInstrList,
+                 basicBlocksToIStream,
                  nameToString) where
 
 import Data.List as L
+import Data.Map as M
 import LLVM.General.AST as AST
 import LLVM.General.AST.Constant
 
 import InstructionSet
+import InstructionStream
 import TypeSystem
 
 llvmTypeToTypeT :: Type -> TypeT
@@ -43,3 +45,9 @@ llvmOperandToOp other = error $ "Error in llvmOperandToOp: Cannot convert " ++ s
 
 nameToString (Name n) = n
 nameToString (UnName w) = "$UN-" ++ show w
+
+basicBlocksToIStream :: [BasicBlock] -> InstructionStream
+basicBlocksToIStream bbs =
+  let instrList = L.concatMap basicBlockToInstrList bbs
+      numberedInstrs = L.zip [1..(length instrList)] instrList in
+  instructionStream $ M.fromList numberedInstrs
