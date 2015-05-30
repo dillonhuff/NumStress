@@ -43,6 +43,11 @@ llvmInstructionToInstr n (AST.Sub _ _ a b _) = sub (ref n tp) aOp bOp
     aOp = llvmOperandToOp a
     bOp = llvmOperandToOp b
     tp = opType aOp
+llvmInstructionToInstr n (AST.Mul _ _ a b _) = mul (ref n tp) aOp bOp
+  where
+    aOp = llvmOperandToOp a
+    bOp = llvmOperandToOp b
+    tp = opType aOp
 llvmInstructionToInstr n i = error $ "llvmInstructionToInstr does not yet support " ++ show i
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t

@@ -1,6 +1,6 @@
 module Term(Term,
-            symbol, intConstant, symbolType,
-            signDivide, termToZ3Formula, isum, iminus) where
+            symbol, intConstant, termType,
+            signDivide, termToZ3Formula, isum, idiff, iprod) where
 
 import Data.List as L
 import Data.Word
@@ -19,21 +19,26 @@ instance Show Term where
   show (IntConstant w i) = show i
   show (Func n _ args) = "(" ++ n ++ " " ++ (L.concat $ L.intersperse " " $ L.map show args) ++ ")"
   
-
 symbol = Symbol
 intConstant width val = IntConstant width val
 
 signDivide a b = Func "s-div" 2 [a, b]
 isum a b = Func "+" 2 [a, b]
-iminus a b = Func "-" 2 [a, b]
+idiff a b = Func "-" 2 [a, b]
+iprod a b = Func "*" 2 [a, b]
 
-symbolType (Symbol t _) = t
+termType (Symbol t _) = t
+termType (IntConstant w _) = integer w
 
 termToZ3Formula (Func "+" _ [l, r]) = do
   lf <- termToZ3Formula l
   rf <- termToZ3Formula r
   mkBvadd lf rf
 termToZ3Formula (Func "-" _ [l, r]) = do
+  lf <- termToZ3Formula l
+  rf <- termToZ3Formula r
+  mkBvsub lf rf
+termToZ3Formula (Func "*" _ [l, r]) = do
   lf <- termToZ3Formula l
   rf <- termToZ3Formula r
   mkBvsub lf rf

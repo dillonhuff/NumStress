@@ -9,10 +9,12 @@ module InstructionSet(Instr,
                       lhs, rhs,
                       Op, ref, constant, opType,
                       Constant,
-                      intConst) where
+                      isConstant,
+                      intConst, constantToTerm, constantValue) where
 
 import Data.Word
 
+import Term
 import TypeSystem
 
 data Instr
@@ -97,9 +99,22 @@ ref = Ref
 constant = Constant
 
 opType (Ref _ t) = t
+opType (Constant c) = constantType c
+
+isRef (Ref _ _) = True
+isRef _ = False
+
+isConstant (Constant _) = True
+isConstant _ = False
+
+constantValue (Constant c) = c
 
 data Constant
   = IntConst Word32 Integer
     deriving (Eq, Ord, Show)
 
 intConst width val = IntConst width val
+
+constantToTerm (IntConst w i) = intConstant w i
+
+constantType (IntConst w _) = integer w

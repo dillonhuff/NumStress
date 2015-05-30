@@ -89,7 +89,8 @@ executeInstruction i es ms =
     SDIV -> execSDiv i ms
     ADD -> return $ execAdd i ms
     SUB -> return $ execSub i ms
-    other -> error $ "executeInstruction does not support " ++ show other
+    MUL -> return $ execMul i ms
+--    other -> error $ "executeInstruction does not support " ++ show other
 
 execAlloca i ms =
   let x = receivingOp i
@@ -99,14 +100,14 @@ execAlloca i ms =
 execStore i ms =
   let a = storeValue i
       b = storeLoc i in
-  [incrementIP $ setConstraint (\c -> con [c, eq (deref b ms) (valueSym a ms)]) ms]
+  [incrementIP $ setConstraint (\c -> con [c, eq (deref b ms) (opValue a ms)]) ms]
 
 execLoad :: Instr -> MemoryState -> [MemoryState]
 execLoad i ms =
   let a = receivingOp i
       b = loadLoc i
       newMS = addOpSymbol (opType a) a ms in
-  [incrementIP $ setConstraint (\c -> con [c, eq (valueSym a newMS) (deref b newMS)]) newMS]
+  [incrementIP $ setConstraint (\c -> con [c, eq (opValue a newMS) (deref b newMS)]) newMS]
 
 execAdd :: Instr -> MemoryState -> [MemoryState]
 execAdd i ms =
@@ -114,7 +115,7 @@ execAdd i ms =
       b = rhs i
       res = receivingOp i
       ms1 = addOpSymbol (opType res) res ms
-      newMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (isum (valueSym a ms1) (valueSym b ms1))]) ms1 in
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (isum (opValue a ms1) (opValue b ms1))]) ms1 in
   [newMS]
 
 execSub :: Instr -> MemoryState -> [MemoryState]
@@ -123,7 +124,16 @@ execSub i ms =
       b = rhs i
       res = receivingOp i
       ms1 = addOpSymbol (opType res) res ms
-      newMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (iminus (valueSym a ms1) (valueSym b ms1))]) ms1 in
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (idiff (opValue a ms1) (opValue b ms1))]) ms1 in
+  [newMS]
+
+execMul :: Instr -> MemoryState -> [MemoryState]
+execMul i ms =
+  let a = lhs i
+      b = rhs i
+      res = receivingOp i
+      ms1 = addOpSymbol (opType res) res ms
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (iprod (opValue a ms1) (opValue b ms1))]) ms1 in
   [newMS]
 
 execSDiv :: Instr -> MemoryState -> IO [MemoryState]
@@ -131,14 +141,20 @@ execSDiv i ms =
   let a = lhs i
       b = rhs i
       res = receivingOp i
-      bVal = valueSym b ms
-      bType = symbolType bVal
+      bVal = opValue b ms
+      bType = termType bVal
       bWidth = intWidth bType
       ms1 = addOpSymbol (opType res) res ms
-      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms1
-      safeMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms1) (signDivide (valueSym a ms1) (valueSym b ms1))]) ms1 in
+      errMS = setConstraint (\c -> con [c, eq (opValue b ms) (intConstant bWidth 0)]) ms1
+      safeMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (signDivide (opValue a ms1) (opValue b ms1))]) ms1 in
   do
     stateIsSat <- isSatisfiable errMS
     case stateIsSat of
       True -> return [safeMS, setError divZeroError errMS]
       False -> return [safeMS]
+
+opValue :: Op -> MemoryState -> Term
+opValue a ms =
+  case isConstant a of
+    True -> constantToTerm $ constantValue a
+    False -> valueSym a ms

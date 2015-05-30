@@ -2,9 +2,7 @@ module Main(main) where
 
 import Analysis
 
-fileName = "tiny"
+fileName = "/Users/dillon/Haskell/Bugs/NumStress/test/cases/oneError/oe1"
 
-main = do
-  cSourceToBitcode $ fileName ++ ".c"
-  printModule $ File $ fileName ++ ".bc"
+main = moduleErrors fileName
 
