@@ -62,7 +62,7 @@ symExeFunc ps bbs =
 
 symExe execState =
   case liveStates execState of
-    [] -> return []
+    [] -> return $ L.map extractError $ L.filter isError $ memstates execState
     states -> pickStateAndExecute execState >>= symExe
 
 pickStateAndExecute :: ExecutionState -> IO ExecutionState
@@ -114,9 +114,10 @@ execSDiv i ms =
       bVal = valueSym b ms
       bType = symbolType bVal
       bWidth = intWidth bType
-      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms in
+      errMS = setConstraint (\c -> con [c, eq (valueSym b ms) (intConstant bWidth 0)]) ms
+      safeMS = incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms) (signDivide (valueSym a ms) (valueSym b ms))]) ms in
   do
     stateIsSat <- isSatisfiable errMS
     case stateIsSat of
-      True -> error $ "Possible divide by zero" ++ show errMS
-      False -> return [incrementIP $ setConstraint (\c -> con [c, eq (valueSym res ms) (signDivide (valueSym a ms) (valueSym b ms))]) ms]
+      True -> return [safeMS, setError divZeroError errMS]
+      False -> return [safeMS]

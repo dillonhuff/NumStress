@@ -51,9 +51,9 @@ isSAT c = evalZ3 $ isSATZ3 c
 isSATZ3 :: Constraint -> Z3 Bool
 isSATZ3 c = do
   z3CF <- constraintToZ3Formula c
-  res <- error $ show z3CF --check
+  res <- check
   case res of
     Unsat -> return False
-    Sat -> return False
+    Sat -> return True
     other -> error $ "isSatisfiable: invalid result " ++ show other
 

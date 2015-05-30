@@ -1,4 +1,5 @@
 module ExecutionState(ExecutionState,
+                      memstates,
                       executionState,
                       nextInstruction,
                       selectTopMemState,

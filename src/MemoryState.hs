@@ -2,7 +2,7 @@ module MemoryState(MemoryState,
                    nameMap, addrMap, memConstraint, ip, status,
                    incrementIP,
                    isLive, isError, extractError,
-                   setCompleted, initMemState,
+                   setCompleted, initMemState, setError,
                    addNamedSymbol, addOpSymbol,
                    addrSym, valueSym, valueAtAddr, deref,
                    setConstraint, isSatisfiable) where
@@ -64,6 +64,9 @@ incrementSymInd (MemoryState nm am c ip ind s) =
 
 setCompleted (MemoryState nm am c ip ind _) =
   MemoryState nm am c ip ind Completed
+
+setError e (MemoryState nm am c ip ind _) =
+  MemoryState nm am c ip ind (Error e)
 
 addNameSymbol n s (MemoryState nm am c ip ind st) =
   MemoryState (M.insert n s nm) am c ip ind st
