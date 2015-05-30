@@ -51,10 +51,8 @@ isSAT c = evalZ3 $ isSATZ3 c
 isSATZ3 :: Constraint -> Z3 Bool
 isSATZ3 c = do
   z3CF <- constraintToZ3Formula c
+  assert z3CF
   res <- check
-  m <- solverGetModel
-  mStr <- modelToString m
-  r <- error $ "Constraint is " ++ show c ++ "\nModel is\n" ++ mStr
   case res of
     Unsat -> return False
     Sat -> return True

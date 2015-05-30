@@ -11,9 +11,9 @@ testCasePath = projPath ++ "test/cases/"
 
 allAnalysisTests = do
   r1 <- testFunctionM numErrorsInModule noErrorsCases
-  putStrLn $ r1
+  putStrLn r1
   r2 <- testFunctionM numErrorsInModule oneErrorCases
-  putStrLn $ r2
+  putStrLn r2
 
 numErrorsInModule str = liftM L.length $ moduleErrors str
 
