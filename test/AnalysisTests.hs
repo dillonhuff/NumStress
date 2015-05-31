@@ -27,7 +27,8 @@ noErrorsCases =
   ["ne1",
    "ne2",
    "ne3",
-   "ne4"]
+   "ne4",
+   "ne5"]
 
 oneErrorPath = testCasePath ++ "oneError/"
 
@@ -39,7 +40,8 @@ oneErrorCases =
    "oe4",
    "oe5",
    "oe6",
-   "oe7"]
+   "oe7",
+   "oe8"]
 
 multiErrorPath = testCasePath ++ "manyErrors/"
 

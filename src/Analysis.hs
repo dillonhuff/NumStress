@@ -69,8 +69,12 @@ pickStateAndExecute :: ExecutionState -> IO ExecutionState
 pickStateAndExecute execState =
   let (memStateToExec, execStateWithoutMemStateToExec) = selectTopMemState execState in
   do
-    resultStates <- runMemState execStateWithoutMemStateToExec memStateToExec
-    return $ addMemStates resultStates execStateWithoutMemStateToExec
+    memStateSAT <- isSatisfiable memStateToExec
+    case memStateSAT of
+      True -> do
+        resultStates <- runMemState execStateWithoutMemStateToExec memStateToExec
+        return $ addMemStates resultStates execStateWithoutMemStateToExec
+      False -> return execStateWithoutMemStateToExec
 
 runMemState :: ExecutionState -> MemoryState -> IO [MemoryState]
 runMemState es ms =
@@ -159,6 +163,7 @@ execCondBr i ms is =
       trueLabel = InstructionSet.trueDest i
       falseLabel = InstructionSet.falseDest i in
   do
+    putStrLn "execCondBr"
     aMightBeFalse <- isSAT $ Constraint.not $ dis [Constraint.not $ memConstraint ms, eq a (intConstant 1 1)]
     case Prelude.not $ aMightBeFalse of
       True -> return [setIP (labelIndex trueLabel is) ms]
