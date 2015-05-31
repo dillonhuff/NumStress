@@ -1,5 +1,5 @@
 module Constraint(Constraint,
-                  true, false, eq, dis, con,
+                  true, false, eq, neq, dis, con, Constraint.not,
                   isSAT) where
 
 import Data.List as L
@@ -28,7 +28,9 @@ dis = Dis
 con = Con
 false = F
 true = T
+not = Not
 eq a b = Predicate "==" 2 [a, b]
+neq a b = Constraint.not $ Predicate "==" 2 [a, b]
 
 constraintToZ3Formula T = mkTrue
 constraintToZ3Formula F = mkFalse

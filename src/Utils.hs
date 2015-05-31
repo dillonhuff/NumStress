@@ -1,4 +1,4 @@
-module Utils(parseModule, prettyMap) where
+module Utils(cSourceToBitcode, printModule, parseModule, prettyMap) where
 
 import Control.Monad.Except
 import Data.ByteString as BS
@@ -10,10 +10,10 @@ import LLVM.General.AST
 import LLVM.General.Context
 import System.Process
 
-printModule :: File -> IO ()
+printModule :: FilePath -> IO ()
 printModule src = do
   a <- withContext $ \context -> do
-    runExceptT $ withModuleFromBitcode context src $ \mod -> do
+    runExceptT $ withModuleFromBitcode context (File src) $ \mod -> do
       ast <- moduleAST mod
       return ast
   Prelude.putStrLn $ show a

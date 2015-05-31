@@ -14,6 +14,9 @@ allAnalysisTests = do
   putStrLn r1
   r2 <- testFunctionM numErrorsInModule oneErrorCases
   putStrLn r2
+  r3 <- testFunctionM numErrorsInModule multiErrorCases
+  putStrLn r3
+
 
 numErrorsInModule str = liftM L.length $ moduleErrors str
 
@@ -31,4 +34,12 @@ oneErrorCases =
   ["oe1",
    "oe2",
    "oe3",
-   "oe4"]
+   "oe4",
+   "oe5",
+   "oe6"]
+
+multiErrorPath = testCasePath ++ "manyErrors/"
+
+multiErrorCases =
+  L.map (\(x, y) -> (multiErrorPath ++ x, y))
+  [("me1", 2)]

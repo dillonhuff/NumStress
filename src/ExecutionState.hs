@@ -1,5 +1,5 @@
 module ExecutionState(ExecutionState,
-                      memstates,
+                      memstates, iStream,
                       executionState,
                       nextInstruction,
                       selectTopMemState,
@@ -22,7 +22,19 @@ data ExecutionState
 
 executionState = ExecutionState
 
-selectTopMemState (ExecutionState (m:ms) is) = (m, ExecutionState ms is)
+selectTopMemState :: ExecutionState -> (MemoryState, ExecutionState)
+selectTopMemState (ExecutionState ms is) =
+  let (selected, remainder) = selectFirstLiveState ms in
+  (selected, ExecutionState remainder is)
+
+selectFirstLiveState :: [MemoryState] -> (MemoryState, [MemoryState])
+selectFirstLiveState [] = error "selectFirstLiveState: no live states"
+selectFirstLiveState (m:ms) =
+  case isLive m of
+    True -> (m, ms)
+    False ->
+      let (selected, rest) = selectFirstLiveState ms in
+      (selected, m:rest)
 
 addMemStates newMS (ExecutionState ms is) = ExecutionState (newMS ++ ms) is
 

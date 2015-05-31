@@ -1,6 +1,6 @@
 module MemoryState(MemoryState,
                    nameMap, addrMap, memConstraint, ip, status,
-                   incrementIP,
+                   incrementIP, setIP,
                    isLive, isError, extractError,
                    setCompleted, initMemState, setError,
                    addNamedSymbol, addOpSymbol,
@@ -72,6 +72,9 @@ extractError (MemoryState _ _ _ _ _ (Error e)) = e
 
 incrementIP (MemoryState nm am c ip ind s) =
   MemoryState nm am c (ip+1) ind s
+
+setIP newIP (MemoryState nm am c ip ind s) =
+  MemoryState nm am c newIP ind s
 
 incrementSymInd (MemoryState nm am c ip ind s) =
   MemoryState nm am c ip (ind+1) s

@@ -5,6 +5,7 @@ module LLVMUtils(llvmTypeToTypeT,
 import Data.List as L
 import Data.Map as M
 import LLVM.General.AST as AST
+import LLVM.General.AST.IntegerPredicate as IP
 import LLVM.General.AST.Constant
 
 import InstructionSet
@@ -48,11 +49,18 @@ llvmInstructionToInstr n (AST.Mul _ _ a b _) = mul (ref n tp) aOp bOp
     aOp = llvmOperandToOp a
     bOp = llvmOperandToOp b
     tp = opType aOp
+llvmInstructionToInstr n (AST.ICmp pred a b _) = icmp (ref n $ integer 1) (llvmIPredicateToIPred pred) aOp bOp
+  where
+    aOp = llvmOperandToOp a
+    bOp = llvmOperandToOp b
 llvmInstructionToInstr n i = error $ "llvmInstructionToInstr does not yet support " ++ show i
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t
 
 llvmTerminatorToInstruction (Ret (Just val) _) = retVal $ llvmOperandToOp val
+llvmTerminatorToInstruction (CondBr x td fd _) = condbr (llvmOperandToOp x) (label $ nameToString td) (label $ nameToString fd)
+llvmTerminatorToInstruction (Br d _) = br (label $ nameToString d)
+llvmTerminatorToInstruction other = error $ "llvmTerminatorToInstruction does not support " ++ show other
 
 llvmOperandToOp (LocalReference t n) = ref (nameToString n) (llvmTypeToTypeT t)
 llvmOperandToOp (ConstantOperand (Int width val)) = constant $ intConst width val
@@ -66,3 +74,7 @@ basicBlocksToIStream bbs =
   let instrList = L.concatMap basicBlockToInstrList bbs
       numberedInstrs = L.zip [1..(length instrList)] instrList in
   instructionStream $ M.fromList numberedInstrs
+
+llvmIPredicateToIPred IP.EQ = ieq
+llvmIPredicateToIPred IP.NE = ineq
+

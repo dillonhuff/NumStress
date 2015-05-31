@@ -42,6 +42,10 @@ termToZ3Formula (Func "*" _ [l, r]) = do
   lf <- termToZ3Formula l
   rf <- termToZ3Formula r
   mkBvsub lf rf
+termToZ3Formula (Func "s-div" _ [l, r]) = do
+  lf <- termToZ3Formula l
+  rf <- termToZ3Formula r
+  mkBvsdiv lf rf
 termToZ3Formula (IntConstant w value) =  do
   bvW <- mkBvSort $ fromIntegral w
   mkInt64 (fromIntegral value) bvW
