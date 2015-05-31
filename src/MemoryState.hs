@@ -3,7 +3,8 @@ module MemoryState(MemoryState,
                    incrementIP, setIP,
                    isLive, isError, extractError,
                    setCompleted, initMemState, setError,
-                   addNamedSymbol, addOpSymbol,
+                   addNamedSymbol, addOpSymbol, newSymbol,
+                   addValue, freshSymbol,
                    addrSym, valueSym, valueAtAddr, deref,
                    setConstraint, isSatisfiable) where
 

@@ -117,7 +117,11 @@ opcode Ret = RET
 data Op
   = Ref String TypeT
   | Constant Constant
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+instance Show Op where
+  show (Ref s t) = "[" ++ s ++ ", " ++ show t ++ "]"
+  show (Constant c) = show c
 
 ref = Ref
 constant = Constant
@@ -137,7 +141,10 @@ icmpPred (ICmp _ p _ _) = p
 
 data Constant
   = IntConst Word32 Integer
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+instance Show Constant where
+  show c@(IntConst _ val) = "(" ++ show val ++ ", " ++ show (constantType c) ++ ")"
 
 intConst width val = IntConst width val
 

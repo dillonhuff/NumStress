@@ -41,10 +41,13 @@ oneErrorCases =
    "oe5",
    "oe6",
    "oe7",
-   "oe8"]
+   "oe8",
+   "oe9"]
 
 multiErrorPath = testCasePath ++ "manyErrors/"
 
 multiErrorCases =
   L.map (\(x, y) -> (multiErrorPath ++ x, y))
   [("me1", 2)]
+
+runCase path name = moduleErrors $ path ++ name
