@@ -3,6 +3,7 @@ module Analysis(moduleErrors,
                 analyzeModuleWithTimeLimit) where
 
 import Control.Monad.State.Lazy
+import Data.Either
 import Data.Int
 import Data.List as L
 import Data.Map as M
@@ -23,39 +24,50 @@ extractGlobal (GlobalDefinition d) = d
 isFunctionDef (GlobalDefinition (Function _ _ _ _ _ _ _ _ _ _ _ _)) = True
 isFunctionDef _ = False
 
-moduleErrorsWithTimeLimit :: Int64 -> String -> IO [NSError]
-moduleErrorsWithTimeLimit timeLimit str = do
+moduleErrors str = do
+  res <- moduleAnalysis str
+  return $ L.concat $ rights res
+
+moduleErrorsWithTimeLimit t str = do
+  res <- moduleAnalysisWithTimeLimit t str
+  return $ L.concat $ rights res
+
+moduleAnalysisWithTimeLimit :: Int64 -> String -> IO [Either String [NSError]]
+moduleAnalysisWithTimeLimit timeLimit str = do
   parseRes <- parseModule str
   case parseRes of
-    Left err -> error $ show err
+    Left err -> return $ [Left err]
     Right mod -> analyzeModuleWithTimeLimit timeLimit mod
 
-moduleErrors :: String -> IO [NSError]
-moduleErrors str = do
+moduleAnalysis :: String -> IO [Either String [NSError]]
+moduleAnalysis str = do
   parseRes <- parseModule str
   case parseRes of
-    Left err -> error $ show err
+    Left err -> return $ [Left err]
     Right mod -> analyzeModule mod
 
-analyzeModule mod = concatMapM (\d -> analyzeFunction $ extractGlobal d) $ L.filter isFunctionDef $ moduleDefinitions mod
+analyzeModule mod = mapM (\d -> analyzeFunction $ extractGlobal d) $ L.filter isFunctionDef $ moduleDefinitions mod
 
 analyzeModuleWithTimeLimit t mod =
-  concatMapM (\d -> analyzeFunctionWithTimeLimit t $ extractGlobal d) $ L.filter isFunctionDef $ moduleDefinitions mod
+  mapM (\d -> analyzeFunctionWithTimeLimit t $ extractGlobal d) $ L.filter isFunctionDef $ moduleDefinitions mod
 
-analyzeFunction :: Global -> IO [NSError]
-analyzeFunction (Function _ _ _ _ _ _ (ps,True) _ _ _ _ _) = return []
+analyzeFunction :: Global -> IO (Either String [NSError])
+analyzeFunction (Function _ _ _ _ _ _ (ps,True) _ _ _ _ _) = return $ Left "Cannot analyze vararg function"
 analyzeFunction (Function _ _ _ _ _ _ (ps,False) _ _ _ _ bbs) = symExeFunc ps bbs
 
-analyzeFunctionWithTimeLimit :: Int64 -> Global -> IO [NSError]
-analyzeFunctionWithTimeLimit t (Function _ _ _ _ _ _ (ps,True) _ _ _ _ _) = return []
+analyzeFunctionWithTimeLimit :: Int64 -> Global -> IO (Either String [NSError])
+analyzeFunctionWithTimeLimit t (Function _ _ _ _ _ _ (ps,True) _ _ _ _ _) = return $ Left "Cannot analyze vararg function"
 analyzeFunctionWithTimeLimit t (Function _ _ _ _ _ _ (ps,False) _ _ _ _ bbs) = symExeFuncWithTimeLimit t ps bbs
 
-initializeExecutionState :: [Parameter] -> [BasicBlock] -> ExecutionState
+initializeExecutionState :: [Parameter] -> [BasicBlock] -> Either String ExecutionState
 initializeExecutionState ps bbs =
   let initMemState = initialMemoryState ps in
-  case basicBlocksToIStream bbs of
+  do
+    is <- basicBlocksToIStream bbs
+    return $ executionState [initMemState] is
+{-  case basicBlocksToIStream bbs of
     Left err -> error err
-    Right is -> executionState [initMemState] is
+    Right is -> executionState [initMemState] is-}
 
 initialMemoryState :: [Parameter] -> MemoryState
 initialMemoryState ps =
@@ -68,12 +80,20 @@ addParameter ms (Parameter t n _) =
     Left err -> error err
     Right typeT -> addNamedSymbol typeT n ms
 
-symExeFunc :: [Parameter] -> [BasicBlock] -> IO [NSError]
+symExeFunc :: [Parameter] -> [BasicBlock] -> IO (Either String [NSError])
 symExeFunc ps bbs =
-  let startingExec = initializeExecutionState ps bbs in
-  symExe startingExec
+  case initializeExecutionState ps bbs of
+    Left err -> return $ Left err
+    Right startingExec -> do
+      errs <- symExe startingExec
+      return $ Right errs
 
-symExeFuncWithTimeLimit :: Int64 -> [Parameter] -> [BasicBlock] -> IO [NSError]
+symExeFuncWithTimeLimit :: Int64 -> [Parameter] -> [BasicBlock] -> IO (Either String [NSError])
 symExeFuncWithTimeLimit t ps bbs =
-  let startingExec = initializeExecutionState ps bbs in
-  symExeWithTimeLimit t startingExec
+  case initializeExecutionState ps bbs of
+    Left err -> return $ Left err
+    Right startingExec -> do
+      errs <- symExeWithTimeLimit t startingExec
+      return $ Right errs
+
+
