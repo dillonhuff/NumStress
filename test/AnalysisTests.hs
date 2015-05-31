@@ -18,7 +18,7 @@ allAnalysisTests = do
   putStrLn r3
 
 
-numErrorsInModule str = liftM L.length $ moduleErrors str
+numErrorsInModule str = liftM L.length $ moduleErrorsWithTimeLimit 3 str
 
 noErrorPath = testCasePath ++ "noErrors/"
 
@@ -42,7 +42,8 @@ oneErrorCases =
    "oe6",
    "oe7",
    "oe8",
-   "oe9"]
+   "oe9",
+   "oe10"]
 
 multiErrorPath = testCasePath ++ "manyErrors/"
 

@@ -11,63 +11,75 @@ import LLVM.General.AST.Constant
 import InstructionSet
 import InstructionStream
 import TypeSystem
+import Utils
 
-llvmTypeToTypeT :: Type -> TypeT
-llvmTypeToTypeT (IntegerType w) = integer w
-llvmTypeToTypeT (PointerType t _) = TypeSystem.address $ llvmTypeToTypeT t
+llvmTypeToTypeT :: Type -> Either String TypeT
+llvmTypeToTypeT (IntegerType w) = Right $ integer w
+llvmTypeToTypeT (PointerType t _) = do
+  pt <- llvmTypeToTypeT t
+  return $ TypeSystem.address pt
+llvmTypeToTypeT other = Left $ "llvmTypeToTypeT does not support " ++ show other
 
-basicBlockToInstrList (BasicBlock n instrs term) =
-  ((label $ nameToString n) : (L.map namedLLVMInstructionToInstr instrs)) ++ [namedLLVMTerminatorToInstr term]
+basicBlockToInstrList (BasicBlock n instrs term) = do
+  t <- namedLLVMTerminatorToInstr term
+  is <- mapM namedLLVMInstructionToInstr instrs
+  return $ ((label $ nameToString n) : is) ++ [t]
 
 namedLLVMInstructionToInstr ((:=) n i) = llvmInstructionToInstr (nameToString n) i
-namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = store (llvmOperandToOp addr) (llvmOperandToOp val)
+namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = do
+  ad <- llvmOperandToOp addr
+  val <- llvmOperandToOp val
+  return $ store ad val
 
-llvmInstructionToInstr n (Alloca t Nothing _ _) = alloca (ref n tp) tp
-  where
-    tp = TypeSystem.address $ llvmTypeToTypeT t
+llvmInstructionToInstr n (Alloca t Nothing _ _) = do
+  tp <- llvmTypeToTypeT t
+  return $ alloca (ref n $ TypeSystem.address tp) (TypeSystem.address tp)
 llvmInstructionToInstr n (AST.SDiv _ a b _) = llvmArithBinopToInstr sdiv n a b
 llvmInstructionToInstr n (AST.Add _ _ a b _) = llvmArithBinopToInstr add n a b
 llvmInstructionToInstr n (AST.Sub _ _ a b _) = llvmArithBinopToInstr sub n a b
 llvmInstructionToInstr n (AST.Mul _ _ a b _) = llvmArithBinopToInstr mul n a b
-llvmInstructionToInstr n (Load _ a _ _ _) = load (ref n $ typePointedTo tp) aOp
-  where
-    aOp = llvmOperandToOp a
-    tp = opType aOp
+llvmInstructionToInstr n (Load _ a _ _ _) = do
+  aOp <- llvmOperandToOp a
+  return $ load (ref n $ typePointedTo (opType aOp)) aOp
+llvmInstructionToInstr n (AST.ICmp pred a b _) = do
+  aOp <- llvmOperandToOp a
+  bOp <- llvmOperandToOp b
+  return $ icmp (ref n $ integer 1) (llvmIPredicateToIPred pred) aOp bOp
+llvmInstructionToInstr n i = Left $ "llvmInstructionToInstr does not yet support " ++ show i
 
-llvmInstructionToInstr n (AST.ICmp pred a b _) = icmp (ref n $ integer 1) (llvmIPredicateToIPred pred) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-llvmInstructionToInstr n i = error $ "llvmInstructionToInstr does not yet support " ++ show i
-
-llvmArithBinopToInstr binop n a b = binop (ref n tp) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-    tp = opType aOp
+llvmArithBinopToInstr binop n a b = do
+  aOp <- llvmOperandToOp a
+  bOp <- llvmOperandToOp b
+  return $ binop (ref n $ opType aOp) aOp bOp
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t
 
-llvmTerminatorToInstruction (Ret (Just val) _) = retVal $ llvmOperandToOp val
-llvmTerminatorToInstruction (CondBr x td fd _) = condbr (llvmOperandToOp x) (label $ nameToString td) (label $ nameToString fd)
-llvmTerminatorToInstruction (Br d _) = br (label $ nameToString d)
-llvmTerminatorToInstruction other = error $ "llvmTerminatorToInstruction does not support " ++ show other
+llvmTerminatorToInstruction (Ret (Just val) _) = do
+  rVal <- llvmOperandToOp val
+  return $ retVal rVal
+llvmTerminatorToInstruction (CondBr x td fd _) = do
+  xOp <- llvmOperandToOp x
+  return $ condbr xOp (label $ nameToString td) (label $ nameToString fd)
+llvmTerminatorToInstruction (Br d _) = Right $ br (label $ nameToString d)
+llvmTerminatorToInstruction other = Left $ "llvmTerminatorToInstruction does not support " ++ show other
 
-llvmOperandToOp (LocalReference t n) = ref (nameToString n) (llvmTypeToTypeT t)
-llvmOperandToOp (ConstantOperand (Int width val)) = constant $ intConst width val
-llvmOperandToOp other = error $ "Error in llvmOperandToOp: Cannot convert " ++ show other
+llvmOperandToOp (LocalReference t n) = do
+  tp <- llvmTypeToTypeT t
+  return $ ref (nameToString n) tp
+llvmOperandToOp (ConstantOperand (Int width val)) = Right $ constant $ intConst width val
+llvmOperandToOp other = Left $ "Error in llvmOperandToOp: Cannot convert " ++ show other
 
 nameToString (Name n) = n
 nameToString (UnName w) = "$UN-" ++ show w
 
-basicBlocksToIStream :: [BasicBlock] -> InstructionStream
-basicBlocksToIStream bbs =
-  let instrList = L.concatMap basicBlockToInstrList bbs
-      numberedInstrs = L.zip [1..(length instrList)] instrList in
-  instructionStream $ M.fromList numberedInstrs
+basicBlocksToIStream :: [BasicBlock] -> Either String InstructionStream
+basicBlocksToIStream bbs = do
+  instrList <- concatMapM basicBlockToInstrList bbs
+  let numberedInstrs = L.zip [1..(length instrList)] instrList in
+    do
+      return $ instructionStream $ M.fromList numberedInstrs
 
 llvmIPredicateToIPred IP.EQ = ieq
 llvmIPredicateToIPred IP.NE = ineq
 llvmIPredicateToIPred IP.SGT = isgt
 llvmIPredicateToIPred IP.SLT = islt
-

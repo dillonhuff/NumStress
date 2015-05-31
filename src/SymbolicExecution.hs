@@ -1,6 +1,8 @@
-module SymbolicExecution(symExe) where
+module SymbolicExecution(symExe, symExeWithTimeLimit) where
 
+import Data.Int
 import Data.List as L
+import System.Clock
 
 import Constraint
 import Error
@@ -11,9 +13,25 @@ import MemoryState
 import Term
 import TypeSystem
 
+symExeWithTimeLimit :: Int64 -> ExecutionState -> IO [NSError]
+symExeWithTimeLimit timeLeft execState = symExeWithTimeLimitNS ((fromIntegral timeLeft) * 10^9) execState
+
+symExeWithTimeLimitNS :: Integer -> ExecutionState -> IO [NSError]
+symExeWithTimeLimitNS timeLeft execState =
+  case timeLeft < 0 of
+    True -> return $ errorsDetected execState
+    False -> do
+      startTime <- getTime Monotonic
+      nextState <- pickStateAndExecute execState
+      endTime <- getTime Monotonic
+      case liveStates nextState of
+        [] -> return $ errorsDetected execState
+        states -> symExeWithTimeLimitNS (timeLeft - ((timeSpecAsNanoSecs endTime) - (timeSpecAsNanoSecs startTime))) nextState
+
+symExe :: ExecutionState -> IO [NSError]
 symExe execState =
   case liveStates execState of
-    [] -> return $ L.map extractError $ L.filter isError $ memstates execState
+    [] -> return $ errorsDetected execState
     states -> pickStateAndExecute execState >>= symExe
 
 pickStateAndExecute :: ExecutionState -> IO ExecutionState

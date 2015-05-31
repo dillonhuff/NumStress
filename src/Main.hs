@@ -8,9 +8,12 @@ import LLVM.General.Context
 import Analysis
 import Utils
 
-fileName = "/Users/dillon/Haskell/Bugs/NumStress/test/cases/oneError/oe7"
+fileName = "/Users/dillon/CWorkspace/git/git/archive.o"
 
 main = do
-  cSourceToBitcode fileName
-  printModule $ fileName ++ ".bc"
+  mod <- parseBitcode fileName
+  case mod of
+    Left err -> putStrLn err
+    Right m -> analyzeModuleWithTimeLimit 10 m >>= (\errs -> putStrLn $ show errs)
+  
 

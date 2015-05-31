@@ -1,4 +1,9 @@
-module Utils(cSourceToBitcode, printModule, parseModule, prettyMap) where
+module Utils(cSourceToBitcode,
+             printModule,
+             parseModule,
+             prettyMap,
+             parseBitcode,
+             concatMapM) where
 
 import Control.Monad.Except
 import Data.ByteString as BS
@@ -9,6 +14,9 @@ import LLVM.General.Analysis
 import LLVM.General.AST
 import LLVM.General.Context
 import System.Process
+
+concatMapM :: (Monad m) => (a -> m [b]) -> [a] -> m [b]
+concatMapM f as = liftM L.concat $ sequence $ L.map f as
 
 printModule :: FilePath -> IO ()
 printModule src = do
@@ -32,6 +40,9 @@ parseModule fileName = do
   cSourceToBitcode $ fileName
   readModule $ File $ fileName ++ ".bc"
 
+parseBitcode :: FilePath -> IO (Either String LLVM.General.AST.Module)
+parseBitcode filePath = do
+  readModule $ File filePath
 
 cSourceToBitcode :: FilePath -> IO ()
 cSourceToBitcode path =
