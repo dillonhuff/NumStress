@@ -1,5 +1,6 @@
 module Constraint(Constraint,
                   true, false, eq, neq, dis, con, Constraint.not,
+                  sgt, slt,
                   isSAT) where
 
 import Data.List as L
@@ -31,6 +32,8 @@ true = T
 not = Not
 eq a b = Predicate "==" 2 [a, b]
 neq a b = Constraint.not $ Predicate "==" 2 [a, b]
+sgt a b = Predicate "s->" 2 [a, b]
+slt a b = Predicate "s-<" 2 [a, b]
 
 constraintToZ3Formula T = mkTrue
 constraintToZ3Formula F = mkFalse
@@ -38,6 +41,14 @@ constraintToZ3Formula (Predicate "==" _ [l, r]) = do
   lForm <- termToZ3Formula l
   rForm <- termToZ3Formula r
   mkEq lForm rForm
+constraintToZ3Formula (Predicate "s->" _ [l, r]) = do
+  lForm <- termToZ3Formula l
+  rForm <- termToZ3Formula r
+  mkBvsgt lForm rForm
+constraintToZ3Formula (Predicate "s-<" _ [l, r]) = do
+  lForm <- termToZ3Formula l
+  rForm <- termToZ3Formula r
+  mkBvslt lForm rForm
 constraintToZ3Formula (Not e) = do
   eF <- constraintToZ3Formula e
   mkNot eF

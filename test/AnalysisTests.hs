@@ -25,7 +25,9 @@ noErrorPath = testCasePath ++ "noErrors/"
 noErrorsCases =
   L.map (\x -> (noErrorPath ++ x, 0))
   ["ne1",
-   "ne2"]
+   "ne2",
+   "ne3",
+   "ne4"]
 
 oneErrorPath = testCasePath ++ "oneError/"
 
@@ -36,7 +38,8 @@ oneErrorCases =
    "oe3",
    "oe4",
    "oe5",
-   "oe6"]
+   "oe6",
+   "oe7"]
 
 multiErrorPath = testCasePath ++ "manyErrors/"
 

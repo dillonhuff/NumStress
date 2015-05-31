@@ -11,7 +11,7 @@ module InstructionSet(Instr,
                       Constant,
                       isConstant,
                       intConst, constantToTerm, constantValue,
-                      ieq, ineq, icmpPred, ipredConstraintFunc,
+                      ieq, ineq, isgt, islt, icmpPred, ipredConstraintFunc,
                       dest, trueDest, falseDest, conditionVariable) where
 
 import Data.Word
@@ -148,9 +148,17 @@ constantType (IntConst w _) = integer w
 data IPred
   = IEQ
   | INEQ
+  | ISGT
+  | ISLT
     deriving (Eq, Ord, Show)
 
 ieq = IEQ
 ineq = INEQ
+isgt = ISGT
+islt = ISLT
 
 ipredConstraintFunc IEQ = \a b -> eq a b
+ipredConstraintFunc INEQ = \a b -> Constraint.not $ eq a b
+ipredConstraintFunc ISGT = \a b -> sgt a b
+ipredConstraintFunc ISLT = \a b -> slt a b
+

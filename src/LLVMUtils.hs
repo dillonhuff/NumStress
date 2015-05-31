@@ -77,4 +77,6 @@ basicBlocksToIStream bbs =
 
 llvmIPredicateToIPred IP.EQ = ieq
 llvmIPredicateToIPred IP.NE = ineq
+llvmIPredicateToIPred IP.SGT = isgt
+llvmIPredicateToIPred IP.SLT = islt
 
