@@ -37,18 +37,9 @@ slt a b = Predicate "s-<" 2 [a, b]
 
 constraintToZ3Formula T = mkTrue
 constraintToZ3Formula F = mkFalse
-constraintToZ3Formula (Predicate "==" _ [l, r]) = do
-  lForm <- termToZ3Formula l
-  rForm <- termToZ3Formula r
-  mkEq lForm rForm
-constraintToZ3Formula (Predicate "s->" _ [l, r]) = do
-  lForm <- termToZ3Formula l
-  rForm <- termToZ3Formula r
-  mkBvsgt lForm rForm
-constraintToZ3Formula (Predicate "s-<" _ [l, r]) = do
-  lForm <- termToZ3Formula l
-  rForm <- termToZ3Formula r
-  mkBvslt lForm rForm
+constraintToZ3Formula (Predicate "==" _ [l, r]) = binaryPredToZ3Formula mkEq l r
+constraintToZ3Formula (Predicate "s->" _ [l, r]) = binaryPredToZ3Formula mkBvsgt l r
+constraintToZ3Formula (Predicate "s-<" _ [l, r]) = binaryPredToZ3Formula mkBvslt l r
 constraintToZ3Formula (Not e) = do
   eF <- constraintToZ3Formula e
   mkNot eF
@@ -58,6 +49,11 @@ constraintToZ3Formula (Dis args) = do
 constraintToZ3Formula (Con args) = do
   argsAsZ3Formulas <- mapM constraintToZ3Formula args
   mkAnd argsAsZ3Formulas
+
+binaryPredToZ3Formula p l r = do
+  lForm <- termToZ3Formula l
+  rForm <- termToZ3Formula r
+  p lForm rForm  
 
 isSAT c = evalZ3 $ isSATZ3 c
 

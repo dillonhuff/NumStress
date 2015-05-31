@@ -25,35 +25,26 @@ namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = store (llvmOperandTo
 llvmInstructionToInstr n (Alloca t Nothing _ _) = alloca (ref n tp) tp
   where
     tp = TypeSystem.address $ llvmTypeToTypeT t
+llvmInstructionToInstr n (AST.SDiv _ a b _) = llvmArithBinopToInstr sdiv n a b
+llvmInstructionToInstr n (AST.Add _ _ a b _) = llvmArithBinopToInstr add n a b
+llvmInstructionToInstr n (AST.Sub _ _ a b _) = llvmArithBinopToInstr sub n a b
+llvmInstructionToInstr n (AST.Mul _ _ a b _) = llvmArithBinopToInstr mul n a b
 llvmInstructionToInstr n (Load _ a _ _ _) = load (ref n $ typePointedTo tp) aOp
   where
     aOp = llvmOperandToOp a
     tp = opType aOp
-llvmInstructionToInstr n (AST.SDiv _ a b _) = sdiv (ref n tp) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-    tp = opType aOp
-llvmInstructionToInstr n (AST.Add _ _ a b _) = add (ref n tp) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-    tp = opType aOp
-llvmInstructionToInstr n (AST.Sub _ _ a b _) = sub (ref n tp) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-    tp = opType aOp
-llvmInstructionToInstr n (AST.Mul _ _ a b _) = mul (ref n tp) aOp bOp
-  where
-    aOp = llvmOperandToOp a
-    bOp = llvmOperandToOp b
-    tp = opType aOp
+
 llvmInstructionToInstr n (AST.ICmp pred a b _) = icmp (ref n $ integer 1) (llvmIPredicateToIPred pred) aOp bOp
   where
     aOp = llvmOperandToOp a
     bOp = llvmOperandToOp b
 llvmInstructionToInstr n i = error $ "llvmInstructionToInstr does not yet support " ++ show i
+
+llvmArithBinopToInstr binop n a b = binop (ref n tp) aOp bOp
+  where
+    aOp = llvmOperandToOp a
+    bOp = llvmOperandToOp b
+    tp = opType aOp
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t
 

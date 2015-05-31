@@ -75,7 +75,6 @@ pickStateAndExecute execState =
         resultStates <- runMemState execStateWithoutMemStateToExec memStateToExec
         return $ addMemStates resultStates execStateWithoutMemStateToExec
       False -> do
---        putStrLn $ "Discarding state " ++ show memStateToExec
         return execStateWithoutMemStateToExec
 
 runMemState :: ExecutionState -> MemoryState -> IO [MemoryState]
@@ -85,7 +84,6 @@ runMemState es ms =
 
 executeInstruction :: Instr -> ExecutionState -> MemoryState -> IO [MemoryState]
 executeInstruction i es ms = do
---  putStrLn $ "IP = " ++ show (ip ms)
   case opcode i of
     RET -> return [setCompleted ms]
     RETVAL -> return [setCompleted ms]
@@ -94,14 +92,12 @@ executeInstruction i es ms = do
     STORE -> return $ execStore i ms
     LOAD -> return $ execLoad i ms
     SDIV -> execSDiv i ms
-    ADD -> return $ execAdd i ms
-    SUB -> return $ execSub i ms
-    MUL -> return $ execMul i ms
-    ICMP -> execICmp i ms 
-    CONDBR -> do
---      putStrLn $ show $ es
-      execCondBr i ms $ iStream es
-    BR -> execBr i ms $ iStream es
+    ADD -> return $ execSafeArithBinop isum i ms
+    SUB -> return $ execSafeArithBinop idiff i ms
+    MUL -> return $ execSafeArithBinop iprod i ms
+    ICMP -> return $ execICmp i ms 
+    CONDBR -> execCondBr i ms $ iStream es
+    BR -> return $ execBr i ms $ iStream es
 
 execAlloca i ms =
   let x = receivingOp i
@@ -123,50 +119,28 @@ execLoad i ms =
       newMS = addOpSymbol (opType a) a ms in
   [incrementIP $ setConstraint (\c -> con [c, eq (opValue a newMS) (deref b newMS)]) newMS]
 
-execAdd :: Instr -> MemoryState -> [MemoryState]
-execAdd i ms =
+execSafeArithBinop :: (Term -> Term -> Term) -> Instr -> MemoryState -> [MemoryState]
+execSafeArithBinop f i ms =
   let a = lhs i
       b = rhs i
       res = receivingOp i
       ms1 = addOpSymbol (opType res) res ms
-      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (isum (opValue a ms1) (opValue b ms1))]) ms1 in
+      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (f (opValue a ms1) (opValue b ms1))]) ms1 in
   [newMS]
-
-execSub :: Instr -> MemoryState -> [MemoryState]
-execSub i ms =
-  let a = lhs i
-      b = rhs i
-      res = receivingOp i
-      ms1 = addOpSymbol (opType res) res ms
-      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (idiff (opValue a ms1) (opValue b ms1))]) ms1 in
-  [newMS]
-
-execICmp :: Instr -> MemoryState -> IO [MemoryState]
+  
+execICmp :: Instr -> MemoryState -> [MemoryState]
 execICmp i ms =
   let res = receivingOp i
       ms1 = addOpSymbol (opType res) res ms
       (l, r) = makeICmpConstraints i ms1
       ms2 = incrementIP ms1
-      newStates = [setConstraint (\c -> con [c, l]) ms2, setConstraint (\c -> con [c, r]) ms2]in
-  do
---    putStrLn $ "Exec ICmp new states:\n" ++ show newStates
-    return newStates
+      newStates = [setConstraint (\c -> con [c, l]) ms2, setConstraint (\c -> con [c, r]) ms2] in
+  newStates
 
-execMul :: Instr -> MemoryState -> [MemoryState]
-execMul i ms =
-  let a = lhs i
-      b = rhs i
-      res = receivingOp i
-      ms1 = addOpSymbol (opType res) res ms
-      newMS = incrementIP $ setConstraint (\c -> con [c, eq (opValue res ms1) (iprod (opValue a ms1) (opValue b ms1))]) ms1 in
-  [newMS]
-
-execBr :: Instr -> MemoryState -> InstructionStream -> IO [MemoryState]
+execBr :: Instr -> MemoryState -> InstructionStream -> [MemoryState]
 execBr i ms is =
   let destLabel = InstructionSet.dest i in
-  do
---    putStrLn $ "execBr to " ++ show destLabel ++ " from " ++ show (ip ms)
-    return [setIP (labelIndex destLabel is) ms]
+  [setIP (labelIndex destLabel is) ms]
 
 execCondBr :: Instr -> MemoryState -> InstructionStream -> IO [MemoryState]
 execCondBr i ms is =
@@ -175,11 +149,9 @@ execCondBr i ms is =
       trueLabel = InstructionSet.trueDest i
       falseLabel = InstructionSet.falseDest i in
   do
---    putStrLn $ "CONDBR WITH MEMSTATE\n" ++ show ms
     aMightBeFalse <- isSAT $ Constraint.not $ dis [Constraint.not $ memConstraint ms, eq a (intConstant 1 1)]
     case Prelude.not $ aMightBeFalse of
       True -> do
---        putStrLn $ "Taking true branch to " ++ show (labelIndex trueLabel is)
         return [setIP (labelIndex trueLabel is) ms]
       False -> do
         aMightBeTrue <- isSAT $ Constraint.not $ dis [Constraint.not $ memConstraint ms, eq a (intConstant 1 0)]
@@ -187,7 +159,6 @@ execCondBr i ms is =
           True -> return [setIP (labelIndex falseLabel is) ms]
           False -> error "execCondBr: Ambiguous condition variables are not yet supported"
         
-
 execSDiv :: Instr -> MemoryState -> IO [MemoryState]
 execSDiv i ms =
   let a = lhs i

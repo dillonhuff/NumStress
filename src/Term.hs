@@ -30,22 +30,10 @@ iprod a b = Func "*" 2 [a, b]
 termType (Symbol t _) = t
 termType (IntConstant w _) = integer w
 
-termToZ3Formula (Func "+" _ [l, r]) = do
-  lf <- termToZ3Formula l
-  rf <- termToZ3Formula r
-  mkBvadd lf rf
-termToZ3Formula (Func "-" _ [l, r]) = do
-  lf <- termToZ3Formula l
-  rf <- termToZ3Formula r
-  mkBvsub lf rf
-termToZ3Formula (Func "*" _ [l, r]) = do
-  lf <- termToZ3Formula l
-  rf <- termToZ3Formula r
-  mkBvsub lf rf
-termToZ3Formula (Func "s-div" _ [l, r]) = do
-  lf <- termToZ3Formula l
-  rf <- termToZ3Formula r
-  mkBvsdiv lf rf
+termToZ3Formula (Func "+" _ [l, r]) = binaryFuncToZ3Formula mkBvadd l r
+termToZ3Formula (Func "-" _ [l, r]) = binaryFuncToZ3Formula mkBvsub l r
+termToZ3Formula (Func "*" _ [l, r]) = binaryFuncToZ3Formula mkBvmul l r
+termToZ3Formula (Func "s-div" _ [l, r]) = binaryFuncToZ3Formula mkBvsdiv l r
 termToZ3Formula (IntConstant w value) =  do
   bvW <- mkBvSort $ fromIntegral w
   mkInt64 (fromIntegral value) bvW
@@ -55,3 +43,8 @@ termToZ3Formula (Symbol t i) =
       vSym <- mkStringSymbol $ show i
       mkBvVar vSym $ fromIntegral $ intWidth t
     False -> error $ "termToZ3Formula does not support type "  ++ show t
+
+binaryFuncToZ3Formula f l r = do
+  lf <- termToZ3Formula l
+  rf <- termToZ3Formula r
+  f lf rf
