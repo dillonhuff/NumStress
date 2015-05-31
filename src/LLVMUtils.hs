@@ -30,6 +30,7 @@ namedLLVMInstructionToInstr (Do (Store _ addr val _ _ _)) = do
   ad <- llvmOperandToOp addr
   val <- llvmOperandToOp val
   return $ store ad val
+namedLLVMInstructionToInstr other = Left $ "namedLLVMInstructionToInstr does not yet support " ++ show other
 
 llvmInstructionToInstr n (Alloca t Nothing _ _) = do
   tp <- llvmTypeToTypeT t
@@ -53,6 +54,7 @@ llvmArithBinopToInstr binop n a b = do
   return $ binop (ref n $ opType aOp) aOp bOp
 
 namedLLVMTerminatorToInstr (Do t) = llvmTerminatorToInstruction t
+namedLLVMTerminatorToInstr other = Left $ "namedLLVMTerminatorToInstr does not yet support " ++ show other
 
 llvmTerminatorToInstruction (Ret (Just val) _) = do
   rVal <- llvmOperandToOp val

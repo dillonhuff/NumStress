@@ -60,25 +60,21 @@ analyzeFunctionWithTimeLimit t (Function _ _ _ _ _ _ (ps,True) _ _ _ _ _) = retu
 analyzeFunctionWithTimeLimit t (Function _ _ _ _ _ _ (ps,False) _ _ _ _ bbs) = symExeFuncWithTimeLimit t ps bbs
 
 initializeExecutionState :: [Parameter] -> [BasicBlock] -> Either String ExecutionState
-initializeExecutionState ps bbs =
-  let initMemState = initialMemoryState ps in
-  do
-    is <- basicBlocksToIStream bbs
-    return $ executionState [initMemState] is
-{-  case basicBlocksToIStream bbs of
-    Left err -> error err
-    Right is -> executionState [initMemState] is-}
+initializeExecutionState ps bbs = do
+  initMemState <- initialMemoryState ps
+  is <- basicBlocksToIStream bbs
+  return $ executionState [initMemState] is
 
-initialMemoryState :: [Parameter] -> MemoryState
+initialMemoryState :: [Parameter] -> Either String MemoryState
 initialMemoryState ps =
   let initSt = initMemState M.empty M.empty in
-  L.foldl addParameter initSt ps
+  foldM addParameter initSt ps
 
-addParameter :: MemoryState -> Parameter -> MemoryState
+addParameter :: MemoryState -> Parameter -> Either String MemoryState
 addParameter ms (Parameter t n _) =
   case llvmTypeToTypeT t of
-    Left err -> error err
-    Right typeT -> addNamedSymbol typeT n ms
+    Left err -> Left err
+    Right typeT -> Right $ addNamedSymbol typeT n ms
 
 symExeFunc :: [Parameter] -> [BasicBlock] -> IO (Either String [NSError])
 symExeFunc ps bbs =

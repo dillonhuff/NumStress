@@ -13,7 +13,7 @@ fileName = "/Users/dillon/CWorkspace/git/git/archive.o"
 main = do
   mod <- parseBitcode fileName
   case mod of
-    Left err -> putStrLn err
+    Left err -> putStrLn $ "Parsing error: " ++ err
     Right m -> analyzeModuleWithTimeLimit 10 m >>= (\errs -> putStrLn $ show errs)
   
 
